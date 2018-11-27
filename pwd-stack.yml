@@ -7,7 +7,7 @@ volumes:
     alertmanager_config_data: {}
 
 networks:
-  front-tier:
+  front-external:
   back-tier:
 
 services:
@@ -32,10 +32,6 @@ services:
     networks:
       - back-tier
     restart: always
-    deploy:
-      placement:
-        constraints:
-          - node.hostname == ${HOSTNAME}
 
   node-exporter:
     image: prom/node-exporter
@@ -68,16 +64,13 @@ services:
     command:
       - "--config.file=/etc/alertmanager/config.yml"
       - '--storage.path=/alertmanager'
-    deploy:
-      placement:
-        constraints:
-          - node.hostname == ${HOSTNAME}
+
   cadvisor:
     image: google/cadvisor
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
-      - /sys:/sys:ro
+      - /sys/fs/cgroup/cpu,cpuacct:/sys/fs/cgroup/cpuacct,cpu:ro
       - /var/lib/docker/:/var/lib/docker:ro
     ports:
       - 8080:8080
@@ -86,12 +79,13 @@ services:
     restart: always
     deploy:
       mode: global
+  
   source:
     image: containerize/git
     environment: 
       - REPO_LOCAL=/data/git/repos/prometheus
       - REPO_BRANCH=version-2
-      - REPO_REMOTE=https://github.com/vegasbrianc/prometheus.git
+      - REPO_REMOTE=https://github.com/samjaninf/prometheus.git
     tty: true
     volumes: 
       - prometheus_config_data:/data/git/repos/prometheus/prometheus
@@ -111,4 +105,4 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
       - back-tier
-      - front-tier
+      - front-external
